@@ -47,7 +47,10 @@ function mcp_wc_init() {
     require_once(MCP_WC_PATH . 'inc/utils.php');
     require_once(MCP_WC_PATH . 'inc/rest.php');
     require_once(MCP_WC_PATH . 'inc/executor.php');
-    
+
+    // Garantir que o manifesto esteja sempre atualizado
+    MCP_WC_Utils::ensure_capabilities_file();
+
     // Carregar admin apenas no painel
     if (is_admin()) {
         require_once(MCP_WC_PATH . 'inc/class-admin.php');

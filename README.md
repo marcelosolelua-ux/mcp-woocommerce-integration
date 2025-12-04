@@ -71,6 +71,13 @@ git clone https://github.com/marcelosolelua-ux/mcp-woocommerce-integration.git m
 4. Copie o token gerado
 5. Use o endpoint: `https://seusite.com/wp-json/mcp/v1/execute`
 
+### Configuração rápida no GPTMaker (Terminal MCP)
+
+- **URL do servidor MCP:** `https://seusite.com/wp-json/mcp/v1/execute`
+- **Autenticação:** envie o token no header `X-MCP-Key: <seu_token>` ou `Authorization: Bearer <seu_token>` (o GPTMaker costuma usar o padrão Bearer).
+- **Capacidades automáticas:** `https://seusite.com/wp-json/mcp/v1/capabilities` retorna o manifesto JSON pronto para ser importado no painel do GPTMaker (inclui suporte a `Authorization: Bearer`).
+- **Formato:** JSON-RPC 2.0 (campos `jsonrpc`, `id`, `method`, `params`).
+
 ## 🔐 Autenticação
 
 Todas as requisições devem incluir o header:
@@ -150,9 +157,10 @@ curl -X POST https://seusite.com/wp-json/mcp/v1/execute \
 
 ## 📄 Capabilities JSON
 
-O plugin gera automaticamente um arquivo `capabilities.json` na raiz que descreve todos os métodos disponíveis para agentes de IA.
+O plugin gera o manifesto automático para agentes de IA:
 
-Acesse em: `https://seusite.com/wp-content/plugins/mcp-woocommerce/capabilities.json`
+- Endpoint REST: `https://seusite.com/wp-json/mcp/v1/capabilities`
+- Arquivo local (opcional): `https://seusite.com/wp-content/plugins/mcp-woocommerce/capabilities.json`
 
 ## 🐛 Solução de Problemas
 
@@ -179,6 +187,18 @@ Todos os logs são salvos em:
 ```
 
 Você pode visualizá-los também no painel **MCP WooCommerce → Logs Recentes**
+
+## ✅ Testes rápidos locais
+
+Para validar a sintaxe PHP antes de instalar no WordPress, execute na raiz do repositório:
+
+```bash
+for f in mcp-woocommerce.php $(find inc -name '*.php'); do php -l "$f"; done
+```
+
+O comando deve retornar "No syntax errors detected" para todos os arquivos.
+
+O arquivo `capabilities.json` é regenerado automaticamente em cada carregamento do plugin se a versão ou o protocolo mudarem, garantindo que o manifesto usado pelo GPTMaker esteja sempre sincronizado.
 
 ## 📄 Licença
 

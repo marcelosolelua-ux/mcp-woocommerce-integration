@@ -42,11 +42,46 @@ class MCP_WC_Utils {
     }
 
     public static function create_capabilities_file() {
-        $capabilities = [
-            "version" => "1.0",
+        file_put_contents(
+            MCP_WC_PATH . 'capabilities.json',
+            json_encode(self::get_capabilities(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
+        );
+    }
+
+    public static function ensure_capabilities_file() {
+        $path = MCP_WC_PATH . 'capabilities.json';
+        $current = self::get_capabilities();
+
+        if (!file_exists($path)) {
+            self::create_capabilities_file();
+            return;
+        }
+
+        $stored = json_decode(file_get_contents($path), true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            self::create_capabilities_file();
+            return;
+        }
+
+        $version_mismatch = ($stored['version'] ?? '') !== $current['version'];
+        $protocol_mismatch = ($stored['protocol'] ?? '') !== $current['protocol'];
+
+        if ($version_mismatch || $protocol_mismatch) {
+            self::create_capabilities_file();
+        }
+    }
+
+    public static function get_capabilities() {
+        return [
+            "version" => "1.1",
             "protocol" => "json-rpc-2.0",
             "endpoint" => rest_url('mcp/v1/execute'),
-            "authentication" => "X-MCP-Key header",
+            "authentication" => [
+                "headers" => ["X-MCP-Key", "Authorization: Bearer <token>"],
+                "token_length" => 64,
+                "notes" => "Use Bearer padrão ou X-MCP-Key para compatibilidade total"
+            ],
             "methods" => [
                 "wc.get_product" => ["description" => "Obter detalhes de um produto", "params" => ["id" => "number"], "permission" => "read"],
                 "wc.search_products" => ["description" => "Buscar produtos por nome/SKU/descrição", "params" => ["query" => "string", "page" => "number", "per_page" => "number"], "permission" => "read"],
@@ -58,7 +93,7 @@ class MCP_WC_Utils {
                 "wc.list_orders" => ["description" => "Listar pedidos com filtros", "params" => ["page" => "number", "per_page" => "number", "status" => "string"], "permission" => "read"],
                 "wc.create_order" => ["description" => "Criar novo pedido", "params" => ["customer_id" => "number", "items" => "array"], "permission" => "write"],
                 "wc.update_order_status" => ["description" => "Atualizar status do pedido", "params" => ["id" => "number", "status" => "string"], "permission" => "write"],
-                "wc.get_customer" => ["description" => "Obter dados de um cliente", "params" => ["id" => "number OR email" => "string"], "permission" => "read"],
+                "wc.get_customer" => ["description" => "Obter dados de um cliente", "params" => ["id" => "number", "email" => "string"], "permission" => "read"],
                 "wc.list_customers" => ["description" => "Listar clientes", "params" => ["page" => "number", "per_page" => "number"], "permission" => "read"],
                 "wc.create_customer" => ["description" => "Criar novo cliente", "params" => ["email" => "string", "first_name" => "string"], "permission" => "write"],
                 "wc.get_store_info" => ["description" => "Informações gerais da loja", "params" => [], "permission" => "read"],
@@ -66,11 +101,6 @@ class MCP_WC_Utils {
                 "wc.get_coupons" => ["description" => "Listar cupons ativos", "params" => ["page" => "number", "per_page" => "number"], "permission" => "read"]
             ]
         ];
-        
-        file_put_contents(
-            MCP_WC_PATH . 'capabilities.json',
-            json_encode($capabilities, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-        );
     }
 
     public static function log($message, $level = 'INFO', $context = []) {
@@ -97,13 +127,14 @@ class MCP_WC_Utils {
     public static function validate_token($token) {
         global $wpdb;
         $table = $wpdb->prefix . 'mcp_keys';
-        
+
+        $token = trim((string) $token);
+        $token = sanitize_text_field($token);
+
         if (empty($token) || strlen($token) !== 64) {
             self::log('Token inválido: formato incorreto', 'ERROR');
             return ['ok' => false, 'error' => 'Token inválido'];
         }
-        
-        $token = sanitize_text_field($token);
         $row = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $table WHERE token=%s",
             $token
