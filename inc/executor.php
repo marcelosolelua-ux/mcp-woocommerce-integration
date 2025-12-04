@@ -56,7 +56,16 @@ class MCP_WC_Executor {
             return MCP_WC_Utils::response_error(-32600, 'Requisição malformada', [], $payload);
         }
         
-        $token = $headers['x_mcp_key'][0] ?? $headers['x-mcp-key'][0] ?? '';
+        $authorization = $headers['authorization'][0] ?? '';
+        $bearer = '';
+
+        if (!empty($authorization)) {
+            if (preg_match('/^\s*Bearer\s+(.+)$/i', $authorization, $matches)) {
+                $bearer = trim($matches[1]);
+            }
+        }
+
+        $token = $headers['x_mcp_key'][0] ?? $headers['x-mcp-key'][0] ?? $bearer;
         $auth = MCP_WC_Utils::validate_token($token);
         
         if (!$auth['ok']) {
